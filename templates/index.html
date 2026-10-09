@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shakespeare RAG</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Pirata+One&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(-12px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #f5f1ea;
+            background-image: 
+                repeating-linear-gradient(
+                    0deg,
+                    transparent,
+                    transparent 1px,
+                    rgba(139, 115, 85, 0.02) 1px,
+                    rgba(139, 115, 85, 0.02) 2px
+                );
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(139, 115, 85, 0.15);
+            padding: 16px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo h1 {
+            font-family: 'Pirata One', cursive;
+            font-size: 32px;
+            font-weight: 400;
+            color: #3d2817;
+            letter-spacing: 1px;
+        }
+
+        .nav-buttons {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-btn {
+            background: transparent;
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            color: #5a4a3a;
+            padding: 8px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            border-radius: 6px;
+        }
+
+        .nav-btn:hover {
+            background: rgba(139, 115, 85, 0.05);
+            border-color: rgba(139, 115, 85, 0.3);
+        }
+
+        .nav-btn.active {
+            background: #3d2817;
+            color: #f5f1ea;
+            border-color: #3d2817;
+        }
+
+        main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            max-width: 768px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 48px 24px;
+        }
+
+        .setup-section {
+            display: none;
+            text-align: center;
+            padding: 120px 32px;
+        }
+
+        .setup-section.show {
+            display: block;
+        }
+
+        .setup-section h2 {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: #1a1a1a;
+        }
+
+        .setup-section p {
+            font-size: 15px;
+            color: #6b5d4f;
+            margin: 0 0 24px 0;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(139, 115, 85, 0.15);
+            border-top-color: #8b7355;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        .question-section {
+            display: none;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .question-section.show {
+            display: flex;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 24px;
+        }
+
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb {
+            background: rgba(139, 115, 85, 0.2);
+            border-radius: 3px;
+        }
+
+        .chat-container::-webkit-scrollbar-thumb:hover {
+            background: rgba(139, 115, 85, 0.3);
+        }
+
+        .welcome {
+            text-align: center;
+            padding: 80px 24px;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        .welcome h2 {
+            font-size: 48px;
+            font-weight: 600;
+            margin: 0 0 12px 0;
+            color: #1a1a1a;
+        }
+
+        .welcome p {
+            font-size: 16px;
+            color: #6b5d4f;
+            margin: 0 0 48px 0;
+        }
+
+        .examples {
+            display: grid;
+            gap: 10px;
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        .example-btn {
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(139, 115, 85, 0.15);
+            color: #3d2817;
+            padding: 14px 18px;
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+            text-align: left;
+            border-radius: 8px;
+        }
+
+        .example-btn:hover {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(139, 115, 85, 0.25);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(139, 115, 85, 0.1);
+        }
+
+        .messages {
+            display: none;
+        }
+
+        .messages.show {
+            display: block;
+        }
+
+        .message {
+            margin-bottom: 32px;
+            animation: slideIn 0.4s ease-out;
+        }
+
+        .message-role {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #8b7355;
+            margin-bottom: 8px;
+        }
+
+        .message-content {
+            font-size: 15px;
+            line-height: 1.7;
+            color: #1a1a1a;
+        }
+
+        .input-container {
+            border-top: 1px solid rgba(139, 115, 85, 0.1);
+            padding-top: 24px;
+        }
+
+        .model-selector {
+            position: absolute;
+            right: 56px;
+            bottom: 8px;
+        }
+
+        .model-selector select {
+            padding: 8px 10px;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #3d2817;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+
+        .model-selector select:hover {
+            border-color: rgba(139, 115, 85, 0.3);
+            background: #fff;
+        }
+
+        .model-selector select:focus {
+            outline: none;
+            border-color: rgba(139, 115, 85, 0.4);
+            box-shadow: 0 0 0 2px rgba(139, 115, 85, 0.05);
+        }
+
+        .input-wrapper {
+            position: relative;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(139, 115, 85, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.2s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: rgba(139, 115, 85, 0.4);
+            box-shadow: 0 0 0 3px rgba(139, 115, 85, 0.05);
+        }
+
+        .question-input {
+            width: 100%;
+            padding: 14px 280px 14px 16px;
+            font-size: 14px;
+            border: none;
+            font-family: 'Inter', sans-serif;
+            background: transparent;
+            resize: none;
+            min-height: 48px;
+            color: #1a1a1a;
+        }
+
+        .question-input:focus {
+            outline: none;
+        }
+
+        .question-input::placeholder {
+            color: #9a8a7a;
+        }
+
+        .submit-btn {
+            position: absolute;
+            right: 8px;
+            bottom: 8px;
+            background: #3d2817;
+            color: #f5f1ea;
+            border: none;
+            padding: 8px 12px;
+            font-size: 16px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 32px;
+        }
+
+        .submit-btn:hover {
+            background: #4a3320;
+        }
+
+        .submit-btn:disabled {
+            background: #c4b5a5;
+            cursor: not-allowed;
+        }
+
+        .submit-btn svg {
+            width: 16px;
+            height: 16px;
+        }
+
+        .loading {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            color: #8b7355;
+            font-size: 13px;
+            padding: 12px 0;
+        }
+
+        .loading .spinner {
+            width: 16px;
+            height: 16px;
+            border-width: 2px;
+        }
+
+        .error-box {
+            background: #fef5f5;
+            border: 1px solid #f5c6c6;
+            color: #8b3a3a;
+            padding: 12px 16px;
+            margin-top: 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: none;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .error-box.show {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            header {
+                padding: 12px 20px;
+            }
+
+            .logo h1 {
+                font-size: 24px;
+            }
+
+            main {
+                padding: 32px 16px;
+            }
+
+            .welcome h2 {
+                font-size: 36px;
+            }
+
+            .nav-btn {
+                padding: 6px 14px;
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">
+            <h1>Shakespeare RAG</h1>
+        </div>
+        <div class="nav-buttons">
+            <button class="nav-btn active" onclick="showPage('query')">Home</button>
+            <button class="nav-btn" onclick="showPage('architecture')">Architecture</button>
+        </div>
+    </header>
+
+    <main>
+        <div class="setup-section" id="setupSection">
+            <div class="spinner"></div>
+            <h2>Initializing</h2>
+            <p>Loading Shakespeare's works...</p>
+        </div>
+
+        <div class="question-section show" id="questionSection">
+            <div class="chat-container" id="chatContainer">
+                <div class="welcome" id="welcome">
+                    <h2>Ask the Bard</h2>
+                    <p>Query indexed plays: <em>Romeo & Juliet</em>, <em>Coriolanus</em>, and <em>Richard III</em></p>
+                    <div class="examples">
+                        <button class="example-btn" onclick="askQuestion('What does Romeo want?')">What does Romeo want? (Romeo and Juliet)</button>
+                        <button class="example-btn" onclick="askQuestion('Who is Caius Marcius and what do the citizens want?')">Who is Caius Marcius and what do the citizens want? (Coriolanus)</button>
+                        <button class="example-btn" onclick="askQuestion('What are Gloucester\'s motives in Richard III?')">What are Gloucester's motives? (Richard III)</button>
+                        <button class="example-btn" onclick="askQuestion('Why does Tybalt challenge Romeo?')">Why does Tybalt challenge Romeo? (Romeo and Juliet)</button>
+                    </div>
+                </div>
+
+                <div class="messages" id="messages"></div>
+            </div>
+
+            <div class="input-container">
+                <div class="input-wrapper">
+                    <textarea 
+                        class="question-input" 
+                        id="questionInput" 
+                        placeholder="Ask a question..."
+                        rows="1"
+                        onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); askQuestion(); }"
+                        oninput="this.style.height = 'auto'; this.style.height = Math.min(this.scrollHeight, 150) + 'px'"></textarea>
+                    <div class="model-selector">
+                        <select id="modelSelect" onchange="saveModelPreference()">
+                            <option value="">Loading...</option>
+                        </select>
+                    </div>
+                    <button class="submit-btn" id="askBtn" onclick="askQuestion()" title="Send message">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+                        </svg>
+                    </button>
+                </div>
+                <div class="loading" id="loading" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>Thinking...</span>
+                </div>
+                <div class="error-box" id="errorBox"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let chunksLoaded = false;
+        let availableModels = [];
+        let selectedModel = null;
+
+        async function loadModels() {
+            try {
+                const response = await fetch('/api/models');
+                const data = await response.json();
+                
+                if (data.success && data.models.length > 0) {
+                    availableModels = data.models;
+                    const modelSelect = document.getElementById('modelSelect');
+                    modelSelect.innerHTML = '';
+                    
+                    // Add models to dropdown
+                    data.models.forEach(model => {
+                        const option = document.createElement('option');
+                        option.value = JSON.stringify({
+                            provider: model.provider,
+                            name: model.name
+                        });
+                        option.textContent = model.display;
+                        modelSelect.appendChild(option);
+                    });
+                    
+                    // Load saved preference or use default
+                    const saved = localStorage.getItem('selectedModel');
+                    let matchFound = false;
+                    if (saved) {
+                        try {
+                            const parsedSaved = JSON.parse(saved);
+                            if (data.models.some(m => m.provider === parsedSaved.provider && m.name === parsedSaved.name)) {
+                                modelSelect.value = saved;
+                                selectedModel = parsedSaved;
+                                matchFound = true;
+                            }
+                        } catch (e) {
+                            console.warn('Invalid saved model preference:', e);
+                        }
+                    }
+                    
+                    if (!matchFound) {
+                        // Use default model (e.g. Llama 3.1 8B Groq)
+                        const defaultModel = data.models.find(m => 
+                            m.provider === data.default_provider && m.name === data.default_model
+                        ) || data.models[0];
+                        
+                        if (defaultModel) {
+                            const defaultValue = JSON.stringify({
+                                provider: defaultModel.provider,
+                                name: defaultModel.name
+                            });
+                            modelSelect.value = defaultValue;
+                            selectedModel = defaultModel;
+                            localStorage.setItem('selectedModel', defaultValue);
+                        }
+                    }
+                } else {
+                    showError('No models available. Please check your configuration.');
+                }
+            } catch (error) {
+                console.error('Failed to load models:', error);
+                showError('Failed to load available models');
+            }
+        }
+
+        function saveModelPreference() {
+            const modelSelect = document.getElementById('modelSelect');
+            const value = modelSelect.value;
+            localStorage.setItem('selectedModel', value);
+            selectedModel = JSON.parse(value);
+        }
+
+        async function checkStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const data = await response.json();
+                
+                const setupSection = document.getElementById('setupSection');
+                const questionSection = document.getElementById('questionSection');
+
+                if (data.success) {
+                    if (data.chunk_count > 0) {
+                        chunksLoaded = true;
+                        setupSection.classList.remove('show');
+                        questionSection.classList.add('show');
+                    } else {
+                        setupSection.classList.add('show');
+                        questionSection.classList.remove('show');
+                        await autoLoadData();
+                    }
+                } else {
+                    showError('System initialization failed');
+                }
+            } catch (error) {
+                showError('Unable to connect to server');
+                console.error('Status check failed:', error);
+            }
+        }
+
+        async function autoLoadData() {
+            try {
+                const response = await fetch('/api/load', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    chunksLoaded = true;
+                    document.getElementById('setupSection').classList.remove('show');
+                    document.getElementById('questionSection').classList.add('show');
+                }
+            } catch (error) {
+                showError('Failed to load texts');
+                console.error('Auto-load failed:', error);
+            }
+        }
+
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = message;
+            errorBox.classList.add('show');
+            setTimeout(() => errorBox.classList.remove('show'), 5000);
+        }
+
+        async function askQuestion(questionText) {
+            const input = document.getElementById('questionInput');
+            const btn = document.getElementById('askBtn');
+            const loading = document.getElementById('loading');
+            const errorBox = document.getElementById('errorBox');
+            const welcome = document.getElementById('welcome');
+            const messages = document.getElementById('messages');
+            
+            const question = questionText || input.value.trim();
+            
+            if (!question) {
+                showError('Please enter a question');
+                input.focus();
+                return;
+            }
+            
+            if (!selectedModel) {
+                const modelSelect = document.getElementById('modelSelect');
+                if (modelSelect && modelSelect.value) {
+                    try { selectedModel = JSON.parse(modelSelect.value); } catch (e) {}
+                }
+                if (!selectedModel && availableModels.length > 0) {
+                    selectedModel = availableModels[0];
+                }
+            }
+            
+            if (!selectedModel) {
+                showError('Please wait for models to load or select a model');
+                return;
+            }
+            
+            if (questionText) {
+                input.value = questionText;
+            }
+            
+            welcome.style.display = 'none';
+            messages.classList.add('show');
+            
+            messages.innerHTML += `
+                <div class="message">
+                    <div class="message-role">You</div>
+                    <div class="message-content">${escapeHtml(question)}</div>
+                </div>
+            `;
+            
+            btn.disabled = true;
+            loading.style.display = 'flex';
+            errorBox.classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/ask', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        question: question,
+                        provider: selectedModel.provider,
+                        model: selectedModel.name
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    messages.innerHTML += `
+                        <div class="message">
+                            <div class="message-role">Shakespeare RAG</div>
+                            <div class="message-content">${escapeHtml(data.answer)}</div>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        const container = document.getElementById('chatContainer');
+                        container.scrollTo({
+                            top: container.scrollHeight,
+                            behavior: 'smooth'
+                        });
+                    }, 100);
+                    
+                    input.value = '';
+                    input.style.height = 'auto';
+                } else {
+                    showError(data.error || 'Unable to generate answer');
+                }
+            } catch (error) {
+                showError('Network error');
+                console.error('Query failed:', error);
+            } finally {
+                btn.disabled = false;
+                loading.style.display = 'none';
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showPage(page) {
+            const navBtns = document.querySelectorAll('.nav-btn');
+            navBtns.forEach(btn => btn.classList.remove('active'));
+            
+            if (page === 'query') {
+                navBtns[0].classList.add('active');
+                window.location.href = '/';
+            } else if (page === 'architecture') {
+                navBtns[1].classList.add('active');
+                window.location.href = '/architecture';
+            }
+        }
+
+        // Initialize
+        checkStatus();
+        loadModels();
+    </script>
+</body>
+</html>
